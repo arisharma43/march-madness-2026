@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>March Madness 2026 Bracket</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;min-height:100vh}
+.header{text-align:center;padding:14px 16px 10px;background:linear-gradient(180deg,#161b22,#0d1117);border-bottom:1px solid #30363d}
+.header h1{font-size:22px;background:linear-gradient(135deg,#ff6b35,#ffa94d);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:inline-block}
+.header .sub{font-size:12px;color:#8b949e;margin-top:2px}
+.toolbar{display:flex;justify-content:center;align-items:center;gap:10px;padding:8px 12px;background:#161b22;border-bottom:1px solid #30363d;flex-wrap:wrap}
+.toolbar button{padding:5px 14px;border:1px solid #30363d;background:#21262d;color:#e6edf3;border-radius:6px;cursor:pointer;font-size:12px;transition:background .15s}
+.toolbar button:hover{background:#30363d}
+.toolbar .progress{font-size:12px;color:#8b949e}
+.toolbar .progress b{color:#3fb950}
+.bracket-scroll{overflow-x:auto;overflow-y:auto;padding:12px 8px}
+.bracket{display:flex;justify-content:center;align-items:stretch;gap:0;min-width:fit-content}
+.half{display:flex;flex-direction:column;gap:12px}
+.region{display:flex;align-items:stretch;height:500px}
+.region.reversed{flex-direction:row-reverse}
+.region-label{writing-mode:vertical-lr;text-orientation:mixed;font-weight:800;font-size:13px;color:#ff6b35;padding:4px 5px;display:flex;align-items:center;justify-content:center;letter-spacing:3px;text-transform:uppercase;min-width:22px}
+.region:not(.reversed) .region-label{transform:rotate(180deg)}
+.round-col{display:flex;flex-direction:column;min-width:128px;padding:0 1px}
+.matchup-group{flex:1;display:flex;flex-direction:column;justify-content:space-around}
+.matchup{border:1px solid #30363d;border-radius:5px;overflow:hidden;background:#161b22;flex-shrink:0}
+.team{display:flex;align-items:center;padding:2px 6px;cursor:pointer;transition:all .12s;height:24px;font-size:11.5px;gap:4px}
+.team:first-child{border-bottom:1px solid #21262d}
+.team:hover{background:#1c2333}
+.team .seed{font-weight:700;min-width:18px;font-size:10px;color:#8b949e;text-align:right}
+.team .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.team.picked{background:#1a3a1a}
+.team.picked .name{font-weight:700;color:#3fb950}
+.team.picked .seed{color:#3fb950}
+.team.empty{opacity:.25;cursor:default}
+.team.empty:hover{background:inherit}
+.conn-col{display:flex;flex-direction:column;width:22px;min-width:22px}
+.connector{flex:1;position:relative}
+.region:not(.reversed) .connector::before{content:'';position:absolute;top:25%;bottom:25%;left:0;width:55%;border-top:2px solid #30363d;border-right:2px solid #30363d;border-bottom:2px solid #30363d}
+.region:not(.reversed) .connector::after{content:'';position:absolute;top:50%;left:55%;right:0;border-top:2px solid #30363d;transform:translateY(-1px)}
+.region.reversed .connector::before{content:'';position:absolute;top:25%;bottom:25%;right:0;width:55%;border-top:2px solid #30363d;border-left:2px solid #30363d;border-bottom:2px solid #30363d}
+.region.reversed .connector::after{content:'';position:absolute;top:50%;right:55%;left:0;border-top:2px solid #30363d;transform:translateY(-1px)}
+.center{display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:190px;padding:8px 10px;gap:6px}
+.ff-label{font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:1.5px;font-weight:600}
+.center .matchup{min-width:170px}
+.champion-box{background:linear-gradient(135deg,#ff6b35 0%,#e04e00 100%);padding:14px 28px;border-radius:10px;text-align:center;min-width:170px;box-shadow:0 4px 20px rgba(255,107,53,.3)}
+.champion-box .lbl{font-size:9px;text-transform:uppercase;letter-spacing:2px;opacity:.85;margin-bottom:2px}
+.champion-box .champ-name{font-size:20px;font-weight:900;color:#fff}
+.champion-box.empty-champ{background:linear-gradient(135deg,#21262d,#30363d);box-shadow:none}
+.champion-box.empty-champ .champ-name{color:#8b949e}
+.rationale{max-width:1000px;margin:20px auto;padding:0 20px}
+.rationale h2{font-size:16px;color:#ff6b35;margin-bottom:10px}
+.rationale .picks-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.rationale .pick-card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:10px 12px}
+.rationale .pick-card h3{font-size:13px;color:#ffa94d;margin-bottom:4px}
+.rationale .pick-card p{font-size:11.5px;color:#8b949e;line-height:1.4}
+.upset-badge{display:inline-block;background:#6e40c9;color:#fff;font-size:9px;padding:1px 5px;border-radius:3px;margin-left:4px;font-weight:700;vertical-align:middle}
+@media(max-width:900px){.region{height:420px}.round-col{min-width:105px}.center{min-width:150px;padding:6px}.center .matchup{min-width:140px}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const REGIONS={
+east:{name:'EAST',teams:[
+{s:1,n:'Duke'},{s:16,n:'Siena'},{s:8,n:'Ohio State'},{s:9,n:'TCU'},
+{s:5,n:"St John's"},{s:12,n:'Northern Iowa'},{s:4,n:'Kansas'},{s:13,n:'CA Baptist'},
+{s:6,n:'Louisville'},{s:11,n:'South Florida'},{s:3,n:'Michigan St'},{s:14,n:'N Dakota St'},
+{s:7,n:'UCLA'},{s:10,n:'UCF'},{s:2,n:'UConn'},{s:15,n:'Furman'}]},
+south:{name:'SOUTH',teams:[
+{s:1,n:'Florida'},{s:16,n:'PV/LEH'},{s:8,n:'Clemson'},{s:9,n:'Iowa'},
+{s:5,n:'Vanderbilt'},{s:12,n:'McNeese'},{s:4,n:'Nebraska'},{s:13,n:'Troy'},
+{s:6,n:'North Carolina'},{s:11,n:'VCU'},{s:3,n:'Illinois'},{s:14,n:'Penn'},
+{s:7,n:"Saint Mary's"},{s:10,n:'Texas A&M'},{s:2,n:'Houston'},{s:15,n:'Idaho'}]},
+west:{name:'WEST',teams:[
+{s:1,n:'Arizona'},{s:16,n:'Long Island'},{s:8,n:'Villanova'},{s:9,n:'Utah State'},
+{s:5,n:'Wisconsin'},{s:12,n:'High Point'},{s:4,n:'Arkansas'},{s:13,n:"Hawai'i"},
+{s:6,n:'BYU'},{s:11,n:'Texas'},{s:3,n:'Gonzaga'},{s:14,n:'Kennesaw St'},
+{s:7,n:'Miami'},{s:10,n:'Missouri'},{s:2,n:'Purdue'},{s:15,n:'Queens'}]},
+midwest:{name:'MIDWEST',teams:[
+{s:1,n:'Michigan'},{s:16,n:'Howard'},{s:8,n:'Georgia'},{s:9,n:'Saint Louis'},
+{s:5,n:'Texas Tech'},{s:12,n:'Akron'},{s:4,n:'Alabama'},{s:13,n:'Hofstra'},
+{s:6,n:'Tennessee'},{s:11,n:'M-OH/SMU'},{s:3,n:'Virginia'},{s:14,n:'Wright St'},
+{s:7,n:'Kentucky'},{s:10,n:'Santa Clara'},{s:2,n:'Iowa State'},{s:15,n:'Tennessee St'}]}
+};
+
+const RIDS=['east','south','west','midwest'];
+const RNAMES={r64:'Round of 64',r32:'Round of 32',s16:'Sweet 16',e8:'Elite 8'};
+const GCOUNTS={r64:8,r32:4,s16:2,e8:1};
+const GSTARTS={r64:0,r32:8,s16:12,e8:14};
+
+let G={};
+
+function initGames(){
+G={};
+for(const rid of RIDS){
+const t=REGIONS[rid].teams;
+for(let i=0;i<8;i++) G[rid+'_'+i]={t:[{...t[i*2]},{...t[i*2+1]}],w:null,rd:'r64'};
+for(let i=8;i<12;i++) G[rid+'_'+i]={t:[null,null],w:null,rd:'r32'};
+for(let i=12;i<14;i++) G[rid+'_'+i]={t:[null,null],w:null,rd:'s16'};
+G[rid+'_14']={t:[null,null],w:null,rd:'e8'};
+}
+G.ff_0={t:[null,null],w:null,rd:'ff'};
+G.ff_1={t:[null,null],w:null,rd:'ff'};
+G.champ={t:[null,null],w:null,rd:'champ'};
+}
+
+function teq(a,b){if(!a&&!b)return true;if(!a||!b)return false;return a.n===b.n&&a.s===b.s}
+
+function uSlot(gid,slot,nt){
+const g=G[gid];if(teq(g.t[slot],nt))return;
+g.t[slot]=nt;if(g.w===slot)g.w=null;
+}
+
+function recompute(){
+for(const rid of RIDS){
+for(let i=0;i<4;i++){const a=G[rid+'_'+(i*2)],b=G[rid+'_'+(i*2+1)];
+uSlot(rid+'_'+(8+i),0,a.w!==null?a.t[a.w]:null);
+uSlot(rid+'_'+(8+i),1,b.w!==null?b.t[b.w]:null);}
+for(let i=0;i<2;i++){const a=G[rid+'_'+(8+i*2)],b=G[rid+'_'+(9+i*2)];
+uSlot(rid+'_'+(12+i),0,a.w!==null?a.t[a.w]:null);
+uSlot(rid+'_'+(12+i),1,b.w!==null?b.t[b.w]:null);}
+const a=G[rid+'_12'],b=G[rid+'_13'];
+uSlot(rid+'_14',0,a.w!==null?a.t[a.w]:null);
+uSlot(rid+'_14',1,b.w!==null?b.t[b.w]:null);
+}
+const ew=G.east_14,sw=G.south_14,ww=G.west_14,mw=G.midwest_14;
+uSlot('ff_0',0,ew.w!==null?ew.t[ew.w]:null);
+uSlot('ff_0',1,sw.w!==null?sw.t[sw.w]:null);
+uSlot('ff_1',0,ww.w!==null?ww.t[ww.w]:null);
+uSlot('ff_1',1,mw.w!==null?mw.t[mw.w]:null);
+const f0=G.ff_0,f1=G.ff_1;
+uSlot('champ',0,f0.w!==null?f0.t[f0.w]:null);
+uSlot('champ',1,f1.w!==null?f1.t[f1.w]:null);
+}
+
+function pick(gid,slot){
+const g=G[gid];if(!g||!g.t[slot])return;
+if(g.w===slot){g.w=null;}else{g.w=slot;}
+recompute();render();
+}
+
+function el(tag,cls){const e=document.createElement(tag);if(cls)e.className=cls;return e}
+
+function mkTeam(gid,slot){
+const g=G[gid],t=g.t[slot];
+const d=el('div','team'+(g.w===slot?' picked':'')+(t?'':' empty'));
+if(t){
+d.innerHTML='<span class="seed">'+t.s+'</span><span class="name">'+t.n+'</span>';
+d.onclick=()=>pick(gid,slot);
+}else{
+d.innerHTML='<span class="seed">-</span><span class="name">TBD</span>';
+}
+return d;
+}
+
+function mkMatchup(gid){
+const m=el('div','matchup');m.dataset.game=gid;
+m.appendChild(mkTeam(gid,0));m.appendChild(mkTeam(gid,1));return m;
+}
+
+function renderRegion(rid,rev){
+const reg=el('div','region'+(rev?' reversed':''));
+const lbl=el('div','region-label');lbl.textContent=REGIONS[rid].name;
+reg.appendChild(lbl);
+const rounds=['r64','r32','s16','e8'];
+for(let ri=0;ri<rounds.length;ri++){
+const rd=rounds[ri],last=ri===rounds.length-1;
+const col=el('div','round-col');
+if(last){
+col.style.justifyContent='center';
+col.appendChild(mkMatchup(rid+'_'+GSTARTS[rd]));
+}else{
+for(let i=0;i<GCOUNTS[rd];i+=2){
+const grp=el('div','matchup-group');
+grp.appendChild(mkMatchup(rid+'_'+(GSTARTS[rd]+i)));
+grp.appendChild(mkMatchup(rid+'_'+(GSTARTS[rd]+i+1)));
+col.appendChild(grp);
+}
+}
+reg.appendChild(col);
+if(!last){
+const cc=el('div','conn-col');
+for(let i=0;i<GCOUNTS[rd]/2;i++) cc.appendChild(el('div','connector'));
+reg.appendChild(cc);
+}
+}
+return reg;
+}
+
+function renderCenter(){
+const c=el('div','center');
+let l;
+l=el('div','ff-label');l.textContent='FINAL FOUR';c.appendChild(l);
+l=el('div','ff-label');l.style.fontSize='9px';l.style.marginBottom='2px';
+l.textContent='East vs South';c.appendChild(l);
+c.appendChild(mkMatchup('ff_0'));
+
+l=el('div','ff-label');l.style.marginTop='10px';l.textContent='CHAMPIONSHIP';c.appendChild(l);
+c.appendChild(mkMatchup('champ'));
+
+const ch=G.champ;
+const hasChamp=ch.w!==null;
+const box=el('div','champion-box'+(hasChamp?'':' empty-champ'));
+box.innerHTML='<div class="lbl">&#127942; CHAMPION</div><div class="champ-name">'
++(hasChamp?ch.t[ch.w].n:'Pick all games')+'</div>';
+c.appendChild(box);
+
+l=el('div','ff-label');l.style.marginTop='10px';
+l.textContent='West vs Midwest';c.appendChild(l);
+c.appendChild(mkMatchup('ff_1'));
+return c;
+}
+
+function countPicks(){return Object.values(G).filter(g=>g.w!==null).length}
+
+function render(){
+const app=document.getElementById('app');app.innerHTML='';
+const hdr=el('div','header');
+hdr.innerHTML='<h1>&#127936; March Madness 2026 Bracket</h1><div class="sub">Interactive Bracket Builder &bull; Click teams to pick winners &bull; AI Picks pre-loaded</div>';
+app.appendChild(hdr);
+const tb=el('div','toolbar');
+const p=countPicks();
+tb.innerHTML='<div class="progress">Picks: <b>'+p+'</b>/63</div>'
++'<button onclick="loadAI()">&#129302; AI Picks</button>'
++'<button onclick="resetAll()">&#8635; Reset</button>'
++'<button onclick="exportBracket()">&#128203; Copy to Clipboard</button>';
+app.appendChild(tb);
+const scroll=el('div','bracket-scroll');
+const bkt=el('div','bracket');
+const leftH=el('div','half');
+leftH.appendChild(renderRegion('east',false));
+leftH.appendChild(renderRegion('south',false));
+bkt.appendChild(leftH);
+bkt.appendChild(renderCenter());
+const rightH=el('div','half');
+rightH.appendChild(renderRegion('west',true));
+rightH.appendChild(renderRegion('midwest',true));
+bkt.appendChild(rightH);
+scroll.appendChild(bkt);
+app.appendChild(scroll);
+app.appendChild(buildRationale());
+}
+
+function buildRationale(){
+const div=el('div','rationale');
+div.innerHTML=`<h2>&#128161; AI Pick Rationale</h2>
+<div class="picks-grid">
+<div class="pick-card"><h3>&#127942; Champion: Duke</h3><p>#1 KenPom, +360 betting favorite. Cameron Boozer averages 23 PPG. Only team top-4 in both offensive &amp; defensive efficiency.</p></div>
+<div class="pick-card"><h3>East: Duke over UConn</h3><p>Duke's elite two-way play and Boozer's dominance carry them. UConn is dangerous but Duke's defense is suffocating.</p></div>
+<div class="pick-card"><h3>South: Florida over Houston</h3><p>Florida (#4 KenPom) has top-6 defense and home-region advantage. Houston's defense is elite but Florida's balance wins out.</p></div>
+<div class="pick-card"><h3>West: Arizona over Purdue</h3><p>Arizona (32-2) has six NBA players led by Jaden Bradley. Top-5 offense, top-3 defense. Best roster in the country.</p></div>
+<div class="pick-card"><h3>Midwest: Michigan over Iowa St</h3><p>"Best Michigan team in history" per analysts. #1 defensive efficiency, 31-3 record under Dusty May.</p></div>
+<div class="pick-card"><h3>Key Upset: VCU over UNC <span class="upset-badge">UPSET</span></h3><p>39% upset probability. UNC lost star Caleb Wilson to broken thumb. VCU won 16 of last 17 with balanced attack.</p></div>
+<div class="pick-card"><h3>R32: St John's over Kansas</h3><p>St John's won Big East regular season + tournament. Experts love this pick for a Sweet 16 run vs Duke.</p></div>
+<div class="pick-card"><h3>Final Four</h3><p>Duke, Florida, Arizona, Michigan &mdash; all four #1 seeds. Mirrors 2025 and matches expert consensus for a chalk Final Four.</p></div>
+</div>`;
+return div;
+}
+
+function setWin(gid,name){
+const g=G[gid];if(!g)return;
+if(g.t[0]&&g.t[0].n===name)g.w=0;
+else if(g.t[1]&&g.t[1].n===name)g.w=1;
+}
+
+function loadAI(){
+initGames();
+const r64={
+east:['Duke','Ohio State',"St John's",'Kansas','Louisville','Michigan St','UCLA','UConn'],
+south:['Florida','Iowa','Vanderbilt','Nebraska','VCU','Illinois',"Saint Mary's",'Houston'],
+west:['Arizona','Villanova','Wisconsin','Arkansas','BYU','Gonzaga','Miami','Purdue'],
+midwest:['Michigan','Georgia','Texas Tech','Alabama','Tennessee','Virginia','Kentucky','Iowa State']
+};
+const r32={
+east:['Duke',"St John's",'Michigan St','UConn'],
+south:['Florida','Nebraska','Illinois','Houston'],
+west:['Arizona','Arkansas','Gonzaga','Purdue'],
+midwest:['Michigan','Alabama','Virginia','Iowa State']
+};
+const s16={east:['Duke','UConn'],south:['Florida','Houston'],west:['Arizona','Purdue'],midwest:['Michigan','Iowa State']};
+const e8={east:'Duke',south:'Florida',west:'Arizona',midwest:'Michigan'};
+
+for(const rid of RIDS){
+for(let i=0;i<8;i++) setWin(rid+'_'+i,r64[rid][i]);
+recompute();
+for(let i=0;i<4;i++) setWin(rid+'_'+(8+i),r32[rid][i]);
+recompute();
+for(let i=0;i<2;i++) setWin(rid+'_'+(12+i),s16[rid][i]);
+recompute();
+setWin(rid+'_14',e8[rid]);
+recompute();
+}
+setWin('ff_0','Duke');setWin('ff_1','Arizona');recompute();
+setWin('champ','Duke');recompute();
+render();
+}
+
+function resetAll(){initGames();render();}
+
+function exportBracket(){
+let t='MARCH MADNESS 2026 BRACKET\n'+'='.repeat(40)+'\n\n';
+for(const rid of RIDS){
+t+='=== '+REGIONS[rid].name+' ===\n';
+for(const rd of['r64','r32','s16','e8']){
+t+='\n'+RNAMES[rd]+':\n';
+for(let i=0;i<GCOUNTS[rd];i++){
+const g=G[rid+'_'+(GSTARTS[rd]+i)];
+const a=g.t[0]?'('+g.t[0].s+') '+g.t[0].n:'TBD';
+const b=g.t[1]?'('+g.t[1].s+') '+g.t[1].n:'TBD';
+const w=g.w!==null?' -> '+g.t[g.w].n:'';
+t+='  '+a+' vs '+b+w+'\n';
+}}t+='\n';}
+t+='=== FINAL FOUR ===\n';
+for(const id of['ff_0','ff_1']){const g=G[id];
+const a=g.t[0]?g.t[0].n:'TBD',b=g.t[1]?g.t[1].n:'TBD';
+const w=g.w!==null?' -> '+g.t[g.w].n:'';
+t+='  '+a+' vs '+b+w+'\n';}
+t+='\n=== CHAMPIONSHIP ===\n';
+const ch=G.champ;
+const a=ch.t[0]?ch.t[0].n:'TBD',b=ch.t[1]?ch.t[1].n:'TBD';
+const w=ch.w!==null?' -> '+ch.t[ch.w].n:'';
+t+='  '+a+' vs '+b+w+'\n';
+if(ch.w!==null)t+='\nCHAMPION: '+ch.t[ch.w].n+'\n';
+navigator.clipboard.writeText(t).then(()=>alert('Bracket copied to clipboard!')).catch(()=>{
+const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);
+ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('Bracket copied!');});
+}
+
+initGames();loadAI();
+</script>
+</body>
+</html>
