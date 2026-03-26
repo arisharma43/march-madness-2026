@@ -3,6 +3,7 @@ import { useBracket } from './hooks/useBracket';
 import Region from './components/Region';
 import CenterColumn from './components/CenterColumn';
 import AnalysisPanel from './components/AnalysisPanel';
+import Sweet16Bracket from './components/Sweet16Bracket';
 import { REGIONS } from './data/bracketData';
 
 const TOTAL_PICKS = 63;
@@ -131,6 +132,8 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      <Sweet16Bracket />
 
       <div className="legend">
         <div className="legend-title">Sources Used for AI Picks</div>
